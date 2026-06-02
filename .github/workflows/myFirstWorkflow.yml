@@ -1,6 +1,7 @@
 name: my-first-workflow
 # Trigger this workflow on every push to any branch in the repository
 on: push
+
 jobs:
   job1: 
    name: JOB1
