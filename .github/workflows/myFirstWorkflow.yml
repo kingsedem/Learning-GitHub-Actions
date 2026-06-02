@@ -20,9 +20,3 @@ jobs:
          pwd
          ls -ltr
          hostname
-
-        
-       
-       run: cat /etc/os-release
-     - name: Calling sleep
-       run: sleep 20
