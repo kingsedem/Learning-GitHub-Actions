@@ -49,6 +49,7 @@ jobs:
   job2: 
      name: JOB2
      runs-on: ubuntu-latest
+     needs: job1
      steps:
        - name: Checking current directory
          run: |
