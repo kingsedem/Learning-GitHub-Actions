@@ -14,9 +14,15 @@ jobs:
         ls -ltr
         hostname
      - name: Step-2 - Checkout
-       uses: actions/checkout@v6.0.3
+       uses: actions/upload-artifact@v7
      - name: Step-3
-       run: |
-         pwd
+       run: | 
+         echo `pwd` >> myartifact.txt
          ls -ltr
          hostname
+     -  name: Upload single file
+        uses:  actions/upload-artifact@v7
+        with:
+          name: single_file
+          path: ./myartifacts.txt
+          
