@@ -76,10 +76,11 @@ jobs:
      - name: Referencing Environment Variables
        run: echo "[INFO] running deployment on ${{ vars.Host }} using ${{ vars.USER }}."
      - name: Referencing Environment Secrets
-       run: echo "[INFO] password for ${{ vars.USER }} is ${{secrets.PASSWORD }}."
+       run: echo "[INFO] password for ${{ vars.USER }} is ${{ secrets.PASSWORD }}."
    environment:
      name: STAGING
-
+   if: github.ref == 'refs/heads/devs'
+   
   production:
    name: PRODUCTION DEPLOYMENT
    runs-on: ubuntu-latest
@@ -90,3 +91,4 @@ jobs:
        run: echo "[INFO] password for ${{ vars.USER }} is ${{secrets.PASSWORD }}."
    environment:
      name: PRODUCTION
+   if: github.ref == 'refs/heads/main'
