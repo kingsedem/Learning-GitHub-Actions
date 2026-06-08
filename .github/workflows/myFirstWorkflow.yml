@@ -12,7 +12,7 @@ env:
  APP_USER: Kingsley
  APP_PORT: 80
  
-jobs:
+ jobs:
   job1: 
    name: JOB1
    runs-on: ubuntu-latest
