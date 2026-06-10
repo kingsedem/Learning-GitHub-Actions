@@ -1,0 +1,100 @@
+from collections.abc import Iterator
+from typing import Any
+
+import pytest
+
+from conftest import auth_client
+from models.respondent_payloads import REGISTRATION_QUALIFICATION_BUILDERS, RegistrationPayload
+from testdata import expected_registration_workflow, expected_responses
+
+# Every fixture here is function-scoped: each test gets its own respondent and
+# its own derived state, so tests are independent and can run in any order.
+
+_EXPECTED = expected_responses()
+_WORKFLOW = expected_registration_workflow()
+
+
+# @pytest.fixture
+# def respondent_registration_payload() -> RegistrationPayload:
+#     """Fresh respondent registration payload (one per test)."""
+#     return RegistrationPayload.create()
+
+
+@pytest.fixture
+def registered_respondent(
+    respondent_client,
+    respondent_registration_payload,
+    backoffice_access_token,
+    control_panel_access_token,
+) -> Iterator[dict[str, Any]]:
+    """Register a respondent, yield it, then delete it on teardown.
+
+    Teardown is best-effort: a test may have already deleted the respondent,
+    in which case the delete simply 404s and we still leave the env clean.
+    """
+    expected = _EXPECTED["respondent_registered"]
+    response = respondent_client.register_respondent(
+        respondent_registration_payload, backoffice_access_token
+    )
+    assert response.status_code == expected.status, f"registration failed: {response.text}"
+    body = response.json()
+    assert body["id"] is not None
+    assert body["iam_user_id"] is not None
+    assert body["country"] is not None
+    assert body["standing"] == expected.standing
+
+    respondent = {**respondent_registration_payload.as_body(), **body}
+    print("registered_respondent_id:", respondent["id"])
+
+    yield respondent
+
+    respondent_client.confirm_respondent_profile_deletion(
+        respondent["id"], control_panel_access_token
+    )
+
+
+@pytest.fixture
+def respondent_access_token(auth_client, registered_respondent) -> str:
+    """Respondent-level survey54 token for the registered respondent."""
+    response = auth_client.respondent_token(
+        registered_respondent["email"], registered_respondent["password"]
+    )
+    assert response.status_code == _EXPECTED["respondent_login"].status, (
+        f"respondent login failed: {response.text}"
+    )
+    return response.json()["access_token"]
+
+
+@pytest.fixture
+def qualified_respondent(
+    respondent_client, registered_respondent, respondent_access_token
+) -> dict[str, Any]:
+    """A registered respondent with every registration qualification submitted.
+
+    This is setup, not assertion — the per-qualification behaviour is covered by
+    test_set_workflow_qualification_returns_200_and_saved_answer.
+    """
+    expected_status = _EXPECTED["qualification_saved"].status
+    for build_qualification in REGISTRATION_QUALIFICATION_BUILDERS:
+        response = respondent_client.add_workflow_qualification(
+            build_qualification(), respondent_access_token
+        )
+        assert response.status_code == expected_status, (
+            f"qualification setup failed for {build_qualification.__name__}: {response.text}"
+        )
+    return registered_respondent
+
+
+
+@pytest.fixture
+def registration_workflow(
+    respondent_client, qualified_respondent, respondent_access_token
+) -> dict[str, Any]:
+    """The REGISTRATION workflow available to a fully-qualified respondent."""
+    response = respondent_client.read_workflow_details(_WORKFLOW.type, respondent_access_token)
+    print("read_workflow_details:", response.status_code, response.json())
+
+    assert response.status_code == _EXPECTED["workflow_read"].status
+    workflows = response.json()
+    assert workflows, f"No workflows returned for workflow_type={_WORKFLOW.type}"
+    return workflows[0]
