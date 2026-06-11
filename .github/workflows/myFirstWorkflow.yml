@@ -8,87 +8,22 @@ on:
     branches:
       - main
 
-env:
-  ENV_TYPE: DEV
-  APP_USER: Kingsley
-  APP_PORT: 80
- 
 jobs:
-  job1: 
-    name: JOB1
-    runs-on: ubuntu-latest
-    steps:
-      - name: Step-1
-        run: |
-          pwd
-          ls -ltr
-          hostname
-      - name: Step-2 - Checkout
-        uses: actions/checkout@v6.0.3
-      - name: Step-3
-        run: | 
-          echo `pwd` >> myartifact.txt
-          mkdir artifacts
-          echo `ls -ltr` >> artifacts/list.txt
-          echo `hostname` >> artifacts/hostname.txt
-      - name: Upload single file
-        uses: actions/upload-artifact@v7
-        with:
-          name: single_file
-          path: ./myartifact.txt
-
-  job2: 
-    name: JOB2
-    runs-on: ubuntu-latest
-    needs: job1
-    steps:
-      - name: Checking current directory
-        run: |
-          pwd
-          ls -ltr
-      - name: Download single file artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: single_file
-      - name: Referring Environment Variable
-        run: |
-          echo "[INFO] Running deployment for $ENV_TYPE with user $APP_USER."
-          echo "[INFO] Once deployed application is accessible on $APP_PORT."
-      - name: Referring Repository Secret
-        run: |
-          echo "[INFO] Application password is ${{ secrets.APP_PASSWORD }}"
-
-  job3: 
-    name: JOB3
-    runs-on: ubuntu-latest
-    steps:
-      - name: Referencing Context or in-built variables
-        run: |
-          echo "[INFO] Triggered by ${{ github.event_name }}."
-          echo "[INFO] New changes are added by ${{ github.actor }} in ${{ github.head_ref }} branch."
-          echo "[INFO] Current step is running on ${{ runner.os }}."
-          echo "[INFO] Current job id is ${{ job.check_run_id}}."
-  
-  stage:
-   name: STAGE DEPLOYMENT
+  unit-tests: 
+   name: Running Unit Tests
    runs-on: ubuntu-latest
    steps:
-     - name: Referencing Environment Variables
-       run: echo "[INFO] running deployment on ${{ vars.Host }} using ${{ vars.USER }}."
-     - name: Referencing Environment Secrets
-       run: echo "[INFO] password for ${{ vars.USER }} is ${{ secrets.PASSWORD }}."
-   environment:
-     name: STAGING
-   if: github.head_ref == 'dev'
+     - name: Checkout code
+       uses: actions/checkout@v6.0.3
+     - name: Setup Python
+       uses: actions/setup-python@v6.2.0
+       with:
+         python-version: '3.10'
+     - name: Install dependencies
+       run: |
+         python -m pip install --upgrade pip
+         pip install -r requirements.txt
+     - name: Run Unit Tests
+       run: pytest -v
+       
    
-  production:
-   name: PRODUCTION DEPLOYMENT
-   runs-on: ubuntu-latest
-   steps:
-     - name: Referencing Environment Variables
-       run: echo "[INFO] running deployment on ${{ vars.Host }} using ${{ vars.USER }}."
-     - name: Referencing Environment Secrets
-       run: echo "[INFO] password for ${{ vars.USER }} is ${{secrets.PASSWORD }}."
-   environment:
-     name: PRODUCTION
-   if: github.ref == 'refs/heads/main'
